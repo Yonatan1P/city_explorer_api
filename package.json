@@ -1,0 +1,26 @@
+{
+  "name": "simple-server",
+  "version": "1.0.0",
+  "lockfileVersion": 1,
+  "requires": true,
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "description": "Code Fellows 301d67 Lab06 Following the trello board: https://trello.com/b/0boJ848b/lab06",
+  "main": "server.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yonatan1P/city_explorer_api.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Yonatan1P/city_explorer_api/issues"
+  },
+  "homepage": "https://github.com/Yonatan1P/city_explorer_api#readme"
+}
