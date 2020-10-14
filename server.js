@@ -71,7 +71,7 @@ function handleWeather(request, response) {
         .catch(error => {
             response.status(500).send('sorry, something went wrong.');
         });
-    // otherwise, if an error is handed off, handle it here
+    
     response.status(500).send('sorry, something broke.');
 
 }
