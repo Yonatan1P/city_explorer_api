@@ -1,5 +1,4 @@
 'use strict';
-
 require('dotenv').config();
 
 const express = require('express');
@@ -15,7 +14,6 @@ app.use(cors());
 
 //homepage
 app.get('/', (request, response) => {
-    console.log('homepage works');
   response.send('my homepage');
 });
 //unauthorized error
@@ -56,60 +54,57 @@ function Location(city, coordinates) {
 
 function handleWeather(request, response) {
         const getWeather = request.query.search_query;
-        const weatherKey = WEATHER_API_KEY; 
-        console.log(weatherKey);
-        const url = `https://api.weatherbit.io/v2.0/forecast/daily?key=${weatherKey}&city=${getWeather}`
-       
+        const weatherKey = process.env.WEATHER_API_KEY; 
+        const url = `https://api.weatherbit.io/v2.0/forecast/daily?key=${weatherKey}&city=${getWeather}`      
         superagent.get(url)
         .then(results => {
-            const getWeatherArr = [];
-            const weatherReport = results.body.data.forcast[0];
-            const weatherObj = new Weather (day, weatherReport);
-            locations[url] = weatherObj;
-            response.json(weatherObj);
+            const weatherArr=[];
+            results.body.data.forEach((val)=>{
+                let weatherObj = new Weather(val);
+                weatherArr.push(weatherObj);
+            });
+            response.status(200).send(weatherArr);
         })
         .catch(error => {
             response.status(500).send('sorry, something went wrong.');
-        });
-    
-    response.status(500).send('sorry, something broke.');
-
-}
+        });   
+};
 
 function Weather(data) {
-  this.forcast = data.weather.description;
+  this.forecast = data.weather.description;
   this.time = data.datetime;
 }
 
 function handleTrails(request, response) {
-    const city = request.query.city;
+    const lat = request.query.latitude;
+    const lon = request.query.longitude;   
     const key = process.env.TRAIL_API_KEY;
-    const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${city}&format=json`
-
-        superagent.get(url)
-        .then(data => {
-            const currentCoordinates = data.body[0];
-            const trailObj = new Trail(city, currentCoordinates);
-           
-            response.send(trailObj);
+    const trailUrl = `https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&maxDistance=10&key=${key}`   
+    superagent.get(trailUrl)
+    .then(results => {
+        const trailArr=[];
+        results.body.trails.forEach((trail)=>{
+                let trailObj = new Trail(trail);
+                trailArr.push(trailObj);
+        });
+            response.status(200).send(trailArr);            
         })
         .catch(error => {
-            response.status(500).send('sorry, something went wrong.');
-        });  
+            response.status(500).send('sorry, getting trails went wrong.');
+        });       
 }
 
-function Trail(data) {
-    this.name = data.name;
-    this.type = data.type;
-    this.summary = data.summary;
-    this.location = data.location;
-    this.length = data.length;
-    this.stars = data.star;
-    this.star_votes = data.star_votes;
-    this.trail_url = data.url;
-    this.conditions = data.conditionDetails;
-    this.conditionDate = data.conditionDate;
-    this.conditionTime = data.conditionTime
+function Trail(trails) {
+    this.name = trails.name;
+    this.location = trails.location;
+    this.length = trails.length;
+    this.stars = trails.star;
+    this.star_votes = trails.star_votes;
+    this.summary = trails.summary;
+    this.trail_url = trails.url;
+    this.conditions = trails.conditionDetails;
+    this.conditionDate = trails.conditionDate;
+    this.conditionTime = trails.conditionTime;
 }
 
 //404 catch all route
