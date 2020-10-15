@@ -7,10 +7,14 @@ const cors = require('cors');
 const superagent = require('superagent');
 
 const app = express();
-
+const pg = require('pg');
 const PORT = process.env.PORT;
-
+const client = new pg.Client(process.env.DATABASE_URL);
+client.on('error', console.error);
+client.connect();
 app.use(cors());
+
+const locations = {};
 
 //homepage
 app.get('/', (request, response) => {
@@ -25,23 +29,42 @@ app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
 app.get('/trails', handleTrails);
 app.get('*', notFoundHandler);
+app.get('/add', handleLocalStorage);
 
+function handleLocalStorage(location, response) {
+     
+    let sql = 'INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES ($1,$2,$3,$4)';
+    let sqlArr = [location.search_query,location.formatted_query,location.latitude,location.longitude];
+    client.query(sql, sqlArr);
+    locations[city]=(location);
+
+  };
 
 function handleLocation(request, response) {
     const city = request.query.city;
     const key = process.env.GEOCODE_API_KEY;
     const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${city}&format=json`
-    
-        superagent.get(url)
-        .then(data => {
-            const currentCoordinates = data.body[0];
-            const locationObj = new Location(city, currentCoordinates);
-            response.send(locationObj);
-        })
-        .catch(error => {
-            response.status(500).send('sorry, something went wrong.');
-        });
-      
+    const sql = 'SELECT * FROM locations WHERE search_query=$1'
+    const sqlArr = [city];
+    client.query(sql,sqlArr)
+    .then(sqlData => {
+        if (sqlData.rows.length){
+            console.log(sqlData.rows[0]);
+            response.send(sqlData.rows[0]);
+        }else{
+            superagent.get(url)
+            .then(data => {
+                const currentCoordinates = data.body[0];
+                console.log(currentCoordinates);
+                const locationObj = new Location(city, currentCoordinates);
+                handleLocalStorage(locationObj, response);
+                response.send(locationObj);
+            })
+            .catch(error => {
+                response.status(500).send('sorry, something went wrong with handle location');
+            });      
+        }
+    })
 }
 
 function Location(city, coordinates) {
@@ -79,7 +102,7 @@ function handleTrails(request, response) {
     const lat = request.query.latitude;
     const lon = request.query.longitude;   
     const key = process.env.TRAIL_API_KEY;
-    const trailUrl = `https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&maxDistance=10&key=${key}`   
+    const trailUrl = `https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&maxDistance=200&key=${key}`   
     superagent.get(trailUrl)
     .then(results => {
         const trailArr=[];
@@ -98,13 +121,13 @@ function Trail(trails) {
     this.name = trails.name;
     this.location = trails.location;
     this.length = trails.length;
-    this.stars = trails.star;
+    this.stars = trails.stars;
     this.star_votes = trails.star_votes;
     this.summary = trails.summary;
     this.trail_url = trails.url;
     this.conditions = trails.conditionDetails;
-    this.conditionDate = trails.conditionDate;
-    this.conditionTime = trails.conditionTime;
+    this.condition_date = trails.conditionDate.split(' ')[0];
+    this.condition_time = trails.conditionDate.split(' ')[1];
 }
 
 //404 catch all route
