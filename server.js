@@ -28,16 +28,15 @@ app.get('/unauthorized', (request, response) => {
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
 app.get('/trails', handleTrails);
+app.get('/movies', handleMovies);
 app.get('*', notFoundHandler);
 app.get('/add', handleLocalStorage);
 
-function handleLocalStorage(location, response) {
-     
+function handleLocalStorage(location, response) {    
     let sql = 'INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES ($1,$2,$3,$4)';
     let sqlArr = [location.search_query,location.formatted_query,location.latitude,location.longitude];
     client.query(sql, sqlArr);
     locations[city]=(location);
-
   };
 
 function handleLocation(request, response) {
@@ -102,7 +101,8 @@ function handleTrails(request, response) {
     const lat = request.query.latitude;
     const lon = request.query.longitude;   
     const key = process.env.TRAIL_API_KEY;
-    const trailUrl = `https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&maxDistance=200&key=${key}`   
+    const trailUrl = `https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&maxDistance=200&key=${key}`
+       
     superagent.get(trailUrl)
     .then(results => {
         const trailArr=[];
@@ -138,3 +138,32 @@ function notFoundHandler (request, response) {
 app.listen(PORT, () => {
   console.log(`server up: ${PORT}`);
 });
+
+function handleMovies(request, response) {
+    const getLocation = request.query.search_query;
+    const movieKey = process.env.MOVIE_API_KEY; 
+    const url = `https://api.themoviedb.org/3/search/movie/?api_key=${movieKey}&query=${getLocation}`      
+    superagent.get(url)
+    .then(data => {
+        const movieArr=[];
+        data.body.results.forEach((film)=>{
+            let movieObj = new Movies(film);
+            console.log(movieObj);
+            movieArr.push(movieObj);
+        });
+        response.status(200).send(movieArr);
+    })
+    .catch(error => {
+        response.status(500).send('sorry, something went wrong.');
+    });   
+};
+
+function Movies(data) {
+    this.title = data.title;
+    this.overview = data.overview;
+    this.average_votes = data.vote_average;
+    this.total_votes = data.vote_count;
+    this.image_url = `https://image.tmdb.org/t/p/w500/${data.poster_path}`; 
+    this.popularity = data.popularity;
+    this.released_on = data.release_date;
+}
